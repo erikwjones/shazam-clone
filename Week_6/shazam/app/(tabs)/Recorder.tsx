@@ -106,22 +106,26 @@ export default function Recorder() {
 
       const formData = new FormData();
 
-      // Lets encode the URI of our recording to a blob
-      const responsee = await fetch(uri);
-      const blob = await responsee.blob();
+      // // Lets encode the URI of our recording to a blob
+      // const responsee = await fetch(uri);
+      // const blob = await responsee.blob();
 
-      // Create a file from the blob
-      const file = new File([blob], "audio.flac", { type: "audio/flac" });
+      // // Create a file from the blob
+      // const file = new File([blob], "audio.flac", { type: "audio/flac" });
 
-      console.log("Audio file being sent:", file);
+      // console.log("Audio file being sent:", file);
+
+      const filename = uri.split('/').pop() || 'recording.wav';
+      const mimeType = 'audio/wav';
+      console.log("Audio file being sent (native):", { uri, name: filename, type: mimeType });
 
       // Append the actual file to FormData
-      formData.append("audio", file);
+      formData.append("audio", { uri, name: filename, type: mimeType } as any);
 
       console.log("Sending POST request to server...");
 
       // TODO: type in your server address here
-      const predict_endpoint = "http://35.2.23.50:5003/add_song";
+      const predict_endpoint = "http://35.2.23.50:5003/predict_song";
 
       // This is our first JavaScript promise which is a fetch request to the server
       // We start by making a post request to our prediction endpoint using the form data above
@@ -161,7 +165,7 @@ export default function Recorder() {
     formData.append("youtube_url", song_url);
 
     // TODO: type in your server address here
-    const add_endpoint = "http://35.2.23.50:5003/add_song";
+    const add_endpoint = "http://35.0.53.215:5003/add_song";
 
     // TODO: follow handlePrediction's fetch structure to make a JavaScript fetch
     fetch(add_endpoint, {

@@ -5,6 +5,7 @@ from search import recognize_music
 import DBcontrol as db
 from DBcontrol import init_db
 import DB_adder as dba
+from cm_helper import *
 
 import tempfile
 import os
@@ -70,37 +71,31 @@ def predict():
     
     audio_file = request.files['audio']
     
-    # print(audio_file.path)
-    
-    # if not already a wav file then convert to wav
-    # if audio_file.filename.endswith('.webm'):
-    
-    # Create a temporary file for the webm conversion
-    # with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as temp_webm:
-    #     audio_file.save(temp_webm.name)
-    #     temp_webm_path = temp_webm.name
-    
-    # Convert to WAV using FFmpeg
-    # temp_audio_path = temp_webm_path.replace('.webm', '.wav')
-    
-    # print(f"Converting {temp_webm_path} to {temp__path}")
-    
-    # subprocess.run([
-    #     'ffmpeg', '-i', temp_webm_path,
-    #     '-ar', '44100',  # Sample rate
-    #     '-ac', '1',      # Mono
-    #     '-y',            # Overwrite
-    #     temp_audio_path
-    # ], check=True, capture_output=True)
-    
-    # Use scipy to parse the WAV file properly
-    #sample_rate, audio_array = wavfile.read(temp_audio_path)
-    # Convert to float32 and normalize
-    #audio_array = audio_array.astype(np.float32) / (2**15)
-    #print(f"Audio loaded: {len(audio_array)} samples at {sample_rate}Hz")
+    # React-Native does not record in flac files so we need to convert our audio to flac file manuallys
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as temp_webm:
+        audio_file.save(temp_webm.name)
+        temp_webm_path = temp_webm.name
 
-    # change this to a custom file path to test other files
-    #scores, _ = recognize_music("./tracks/audio/" + audio_file.filename)
+    # Convert to flac using FFmpeg
+    temp_audio_path = temp_webm_path.replace('.webm', '.flac')
+
+    print(f"Converting {temp_webm_path} to {temp_audio_path}")
+
+    subprocess.run([
+        'ffmpeg', '-i', temp_webm_path,
+        '-ar', '44100',  # Sample rate
+        '-ac', '1',      # Mono
+        '-y',            # Overwrite
+        temp_audio_path
+    ], check=True, capture_output=True)
+
+    # TODO: Use a helper function to parse the flac file properly
+    audio_array, sample_rate = preprocess_audio(temp_audio_path)
+
+    # Convert to float32 and normalize
+    audio_array = audio_array.astype(np.float32) / (2**15)
+
+    print(f"Audio loaded: {len(audio_array)} samples at {sample_rate}Hz")
     scores, _ = recognize_music(audio_file.filename)
 
     
@@ -122,6 +117,7 @@ def predict():
     })
     
 # TODO: add an endpoint (@app.route) for adding a song to the database
+@app.route('/add_song', methods=['POST'])
 def add_song():
     """
     Add a song to the database from the uploaded audio file and YouTube URL.
@@ -130,7 +126,8 @@ def add_song():
     """
     
     # TODO: Add a statement here to make sure 'youtube_url' is in request.form
-    pass
+    if 'youtube_url' not in request.form:
+        return jsonify({'error': 'Missing youtube_url in form data'}), 400
 
     # TODO: Extract the YouTube URL from the form data
     # HINT: what did add_song send to the endpoint?
@@ -138,8 +135,7 @@ def add_song():
     #       response = requests.post(url, files=files)  # <-- access files 
     #                                                         dict via request.files
     # from flask import request
-
-    youtube_url = None
+    youtube_url = request.files['youtube_url'].read().decode('utf-8').strip()
     
     # TODO: Check if the song already exists in the database using dba.check_if_song_exists
     # Implement this function in DB_adder.py if not already done
